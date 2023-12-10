@@ -33,17 +33,17 @@ end
 
 {:ok, content} = File.read("a4.txt")
 
-points = String.split(content, "\n", trim: true)
-  |> Enum.reduce(0, fn x, acc ->
-    info = A4.gameinfo(x)
-    findings = Enum.filter(info[:picks], fn y -> Enum.find(info[:wins], fn x -> x ==y end) end) |> length()
-    if findings <= 1 do
-      acc + findings
-    else
-      acc + :math.pow(2, findings - 1)
-    end
-  end)
-IO.puts(points)
+# points = String.split(content, "\n", trim: true)
+#   |> Enum.reduce(0, fn x, acc ->
+#     info = A4.gameinfo(x)
+#     findings = Enum.filter(info[:picks], fn y -> Enum.find(info[:wins], fn x -> x ==y end) end) |> length()
+#     if findings <= 1 do
+#       acc + findings
+#     else
+#       acc + :math.pow(2, findings - 1)
+#     end
+#   end)
+# IO.puts(points)
 
 cardssum = String.split(content, "\n", trim: true)
   |> Enum.reduce(%{:sum => 0, :arr => [1]}, fn x, acc ->

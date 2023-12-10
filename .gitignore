@@ -24,3 +24,8 @@ adventofcode2023-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+
+# Added by cargo
+
+/target
