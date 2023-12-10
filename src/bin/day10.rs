@@ -1,4 +1,4 @@
-use std::{collections::HashSet, time::Duration, vec};
+use std::{collections::{HashSet, HashMap}, time::Duration, vec};
 
 use rhai::Instant;
 
@@ -8,10 +8,17 @@ fn main() {
     let mut start = std::time::Instant::now();
     let bytes = include_bytes!("../../inputs/a10.txt").to_vec();
     let field = Field::from(bytes);
-    let (steps, outer_bounds) = field.find_loop();
+    let (steps, _, _) = field.find_loop();
     println!(
         "Part 1 steps: {}. Found after {}µs",
         (steps as f32 / 2.0),
+        std::time::Instant::now().duration_since(start).as_millis()
+    );
+    let mut start = std::time::Instant::now();
+    let count = field.count_inner_fields();
+    println!(
+        "Part 2 inner fields: {}. Found after {}µs",
+        count,
         std::time::Instant::now().duration_since(start).as_millis()
     );
 }
@@ -69,7 +76,7 @@ impl FieldKind {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum Direction {
     North,
     Easth,
@@ -124,9 +131,14 @@ impl Field {
         }
         panic!("No Start found!");
     }
-    fn find_loop(&self) -> (u32, HashSet<(usize, usize)>) {
+    fn find_loop(
+        &self,
+    ) -> (
+        u32,
+        HashMap<(usize, usize), Direction>,
+        HashSet<(usize, usize)>,
+    ) {
         let (start_x, start_y) = self.find_start();
-        let mut fields: HashSet<(usize, usize)> = HashSet::new();
         // do first step outside loop
         for start_direction in [
             Direction::North,
@@ -135,15 +147,21 @@ impl Field {
             Direction::West,
         ] {
             let (mut x, mut y) = (start_x, start_y);
-            fields.insert((x, y));
+            let mut noso_fields: HashMap<(usize, usize), Direction> = HashMap::new();
+            let mut all_fields: HashSet<(usize, usize)> = HashSet::new();
             let mut steps = 0;
             let mut current_direction = start_direction;
+            if [Direction::North, Direction::South].contains(&current_direction) {
+                noso_fields.insert((x, y), current_direction);
+                println!("insert@{x},{y} - start")
+            }
+            all_fields.insert((x, y));
             while steps == 0 || (x != start_x || y != start_y) {
                 // Do next step
                 if let Some((new_x, new_y)) = current_direction.step(x, y) {
                     (x, y) = (new_x, new_y);
                     steps += 1;
-                    fields.insert((x, y));
+                    all_fields.insert((x, y));
                 } else {
                     println!(
                         "Cannot take step to {:?} at ({},{}). Array bounds",
@@ -157,7 +175,15 @@ impl Field {
                 }
                 // if not, find new direction from current field
                 if let Some(direction) = self.0[x][y].new_direction(current_direction) {
+                    if [Direction::North, Direction::South].contains(&current_direction) {
+                        noso_fields.insert((x, y), current_direction);
+                        println!("insert@{x},{y} - {current_direction:?}")
+                    }
                     current_direction = direction;
+                    if [Direction::North, Direction::South].contains(&current_direction) {
+                        noso_fields.insert((x, y), current_direction);
+                        println!("insert@{x},{y} - {current_direction:?}")
+                    }
                 } else {
                     println!(
                         "Cannot take step to {:?} at ({},{}), moving: {:?}",
@@ -171,7 +197,7 @@ impl Field {
                     "Found loop at ({},{}) in direction: {:?}, steps: {}",
                     x, y, start_direction, steps
                 );
-                return (steps, fields);
+                return (steps, noso_fields, all_fields);
             } else {
                 println!(
                     "Not able to find loop at ({},{}) in direction {:?}!",
@@ -179,45 +205,34 @@ impl Field {
                 );
             }
         }
-        (0, fields)
+        (0, HashMap::new(), HashSet::new())
     }
-    fn find_inner_fields(&self) -> usize {
-        let (_, outer_bounds) = self.find_loop();
-        let mut inner_fields: HashSet<(usize, usize)> = HashSet::new();
-        for (field_x, field_y) in &outer_bounds {
-            for direction in [
-                Direction::North,
-                Direction::South,
-                Direction::Easth,
-                Direction::West,
-            ] {
-                // println!("Field {},{} direction {:?}", field_x, field_y, direction);
-                let (mut x, mut y) = (*field_x, *field_y);
-                let mut collector: HashSet<(usize, usize)> = HashSet::new();
-                while (x <= self.0.len() && y <= self.0[0].len()) {
-                    if let Some((x_new, y_new)) = direction.step(x, y) {
-                        (x,y) = (x_new, y_new);
-                    } else {
-                        break; 
-                    }
-                    // println!("{},{}", x,y);
-                    if outer_bounds.contains(&(x, y)) {
-                        if collector.len() > 0 {
-                            println!("inserting {} fields", collector.len());
+    fn count_inner_fields(&self) -> usize {
+        let (_, noso_fields, all_fields) = self.find_loop();
+        println!("{:?}", noso_fields);
+        let mut count = 0;
+        for (x, line) in self.0.iter().enumerate() {
+            let mut inside = false;
+            let mut last_direction: Option<Direction> = None;
+            for (y, _) in line.iter().enumerate() {
+                if noso_fields.contains_key(&(x, y)) {
+                    if let Some(last) = last_direction {
+                        if last != noso_fields[&(x,y)] {
+                            inside = !inside;
+                            last_direction = Some(noso_fields[&(x,y)]);
                         }
-                        for element in collector {
-                            inner_fields.insert(element);
-                        }
-                        break;
                     } else {
-                        collector.insert((x, y));
+                        inside = !inside;
+                        last_direction = Some(noso_fields[&(x,y)]);
                     }
-                    // bounds check
+                    println!("switch@{x},{y}");
+                } else if inside && !all_fields.contains(&(x, y)) {
+                    println!("found@{x},{y}");
+                    count += 1;
                 }
             }
         }
-        dbg!(&inner_fields);
-        inner_fields.len()
+        count
     }
 }
 
@@ -235,7 +250,7 @@ mod test {
     fn part2() {
         let bytes = include_bytes!("../../inputs/a10_test2.txt").to_vec();
         let field = Field::from(bytes);
-        let inner_fields = field.find_inner_fields();
+        let inner_fields = field.count_inner_fields();
         assert_eq!(inner_fields, 10);
     }
 }
