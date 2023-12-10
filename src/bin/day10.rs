@@ -1,6 +1,4 @@
-use std::{collections::{HashSet, HashMap}, time::Duration, vec};
-
-use rhai::Instant;
+use std::collections::{HashMap, HashSet};
 
 // Johnny Pipewalker
 fn main() {
@@ -14,7 +12,7 @@ fn main() {
         (steps as f32 / 2.0),
         std::time::Instant::now().duration_since(start).as_millis()
     );
-    let mut start = std::time::Instant::now();
+    start = std::time::Instant::now();
     let count = field.count_inner_fields();
     println!(
         "Part 2 inner fields: {}. Found after {}µs",
@@ -114,7 +112,7 @@ impl From<Vec<u8>> for Field {
     fn from(value: Vec<u8>) -> Self {
         let v: Vec<Vec<FieldKind>> = value
             .split(|x| x == &b'\n')
-            .map(|x| x.iter().map(|x| FieldKind::from(x)).collect())
+            .map(|x| x.iter().map(FieldKind::from).collect())
             .collect();
         Field(v)
     }
@@ -131,6 +129,7 @@ impl Field {
         }
         panic!("No Start found!");
     }
+    #[allow(clippy::type_complexity)]
     fn find_loop(
         &self,
     ) -> (
@@ -217,13 +216,13 @@ impl Field {
             for (y, _) in line.iter().enumerate() {
                 if noso_fields.contains_key(&(x, y)) {
                     if let Some(last) = last_direction {
-                        if last != noso_fields[&(x,y)] {
+                        if last != noso_fields[&(x, y)] {
                             inside = !inside;
-                            last_direction = Some(noso_fields[&(x,y)]);
+                            last_direction = Some(noso_fields[&(x, y)]);
                         }
                     } else {
                         inside = !inside;
-                        last_direction = Some(noso_fields[&(x,y)]);
+                        last_direction = Some(noso_fields[&(x, y)]);
                     }
                     println!("switch@{x},{y}");
                 } else if inside && !all_fields.contains(&(x, y)) {
@@ -236,16 +235,17 @@ impl Field {
     }
 }
 
+#[cfg(test)]
 mod test {
     use crate::Field;
 
-    // #[test]
-    // fn part1() {
-    //     let bytes = include_bytes!("../../inputs/a10_test.txt").to_vec();
-    //     let field = Field::from(bytes);
-    //     let (steps, _) = field.find_loop();
-    //     assert_eq!(8, steps / 2);
-    // }
+    #[test]
+    fn part1() {
+        let bytes = include_bytes!("../../inputs/a10_test.txt").to_vec();
+        let field: Field = Field::from(bytes);
+        let (steps, _, _) = field.find_loop();
+        assert_eq!(8, steps / 2);
+    }
     #[test]
     fn part2() {
         let bytes = include_bytes!("../../inputs/a10_test2.txt").to_vec();
