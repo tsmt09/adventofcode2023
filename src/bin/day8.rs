@@ -16,10 +16,7 @@ fn main() {
         .filter(|(k, _v)| k.ends_with('A'))
         .map(|(k, _v)| nodes.steps(&assignments, k, "Z"))
         .collect();
-    let r2: usize = results
-        .into_iter()
-        .reduce(num::integer::lcm)
-        .unwrap();
+    let r2: usize = results.into_iter().reduce(num::integer::lcm).unwrap();
     println!(
         "a2: {} - took {}µs",
         r2,
