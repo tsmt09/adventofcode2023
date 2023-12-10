@@ -17,12 +17,8 @@ fn main() {
     let args = Args::parse();
     log::info!("Starting RHAI engine");
     let mut engine = rhai::Engine::new();
-    engine.on_print(|s| {
-        log::debug!("{s}")
-    });
-    engine.on_debug(|text, source, pos| {
-        log::debug!("{source:?}:{pos} > {text}")
-    });
+    engine.on_print(|s| log::debug!("{s}"));
+    engine.on_debug(|text, source, pos| log::debug!("{source:?}:{pos} > {text}"));
     log::info!("Reading inputs");
     let input = if let Some(input_file) = args.input {
         String::from_utf8(std::fs::read(input_file).unwrap()).unwrap()
